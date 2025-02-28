@@ -9,13 +9,13 @@ app.use(express.json());
 
 // Library handlers
 const libs = {
-    tensor: require('./libs/tensor'),
-    vision: require('./libs/vision'),
-    audio: require('./libs/audio'),
-    nlp: require('./libs/nlp'),
-    math: require('./libs/math'),
-    plot: require('./libs/plot'),
-    data: require('./libs/data')
+    tensor: require('libs/tensor'),
+    vision: require('libs/vision'),
+    audio: require('libs/audio'),
+    nlp: require('libs/nlp'),
+    math: require('libs/math'),
+    plot: require('libs/plot'),
+    data: require('libs/data')
 };
 
 // API Routes
