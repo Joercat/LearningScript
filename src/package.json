@@ -1,0 +1,21 @@
+{
+  "name": "learning-script-ide",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "ejs": "^3.1.6",
+    "@tensorflow/tfjs": "^3.9.0",
+    "plotly.js-dist": "^2.5.1",
+    "sharp": "^0.29.0",
+    "natural": "^5.0.3",
+    "mathjs": "^9.4.4"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.12"
+  }
+}
