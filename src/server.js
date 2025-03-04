@@ -11,7 +11,6 @@ const plotly = require('plotly');
 const Chart = require('chart.js');
 const csv = require('csv-parser');
 const path = require('path');
-
 class LibraryManager {
     constructor() {
         this.libs = {
@@ -50,49 +49,123 @@ class LibraryManager {
             }
         };
     }
-
     getLib(name) {
         return this.libs[name];
     }
 }
-
+function executeScript(script, libraryManager) {
+    const context = {
+        libs: libraryManager.libs,
+        models: {},
+        data: null,
+        currentModel: null
+    };
+    const lines = script.split('\n');
+    const results = [];
+    for (let line of lines) {
+        line = line.trim();
+        if (!line || line.startsWith('#')) continue;
+        if (line.startsWith('package.add')) {
+            const libName = line.split(' ')[1];
+            results.push(`Loaded package: ${libName}`);
+            continue;
+        }
+        if (line.startsWith('new')) {
+            const modelName = line.match(/"([^"]+)"/)[1];
+            context.models[modelName] = {
+                layers: [],
+                config: {}
+            };
+            context.currentModel = context.models[modelName];
+            results.push(`Created model: ${modelName}`);
+            continue;
+        }
+        if (line.startsWith('add')) {
+            const layerMatch = line.match(/add (\w+)(.*)/);
+            if (layerMatch) {
+                const layerType = layerMatch[1];
+                const params = {};
+                const paramMatches = layerMatch[2].match(/(\w+):(\w+)/g) || [];
+                paramMatches.forEach(param => {
+                    const [key, value] = param.split(':');
+                    params[key] = isNaN(value) ? value : Number(value);
+                });
+                if (context.currentModel) {
+                    context.currentModel.layers.push({type: layerType, ...params});
+                    results.push(`Added ${layerType} layer`);
+                }
+            }
+            continue;
+        }
+        if (line.startsWith('learn')) {
+            const modelMatch = line.match(/"([^"]+)"/);
+            const modelName = modelMatch ? modelMatch[1] : null;
+            const model = context.models[modelName];
+            if (model) {
+                const epochs = line.includes('epochs:') ? 
+                    Number(line.match(/epochs:(\d+)/)[1]) : 10;
+                results.push(`Training model ${modelName} for ${epochs} epochs`);
+            }
+            continue;
+        }
+        if (line.startsWith('guess')) {
+            const modelMatch = line.match(/"([^"]+)"/);
+            const modelName = modelMatch ? modelMatch[1] : null;
+            if (context.models[modelName]) {
+                results.push(`Making prediction with model ${modelName}`);
+            }
+            continue;
+        }
+        if (line.startsWith('save')) {
+            const modelMatch = line.match(/"([^"]+)"/);
+            const modelName = modelMatch ? modelMatch[1] : null;
+            if (context.models[modelName]) {
+                results.push(`Saved model ${modelName}`);
+            }
+            continue;
+        }
+        if (line.startsWith('load')) {
+            const modelMatch = line.match(/"([^"]+)"/);
+            const modelName = modelMatch ? modelMatch[1] : null;
+            results.push(`Loaded model ${modelName}`);
+            continue;
+        }
+        if (line.startsWith('show')) {
+            const modelMatch = line.match(/"([^"]+)"/);
+            const modelName = modelMatch ? modelMatch[1] : null;
+            if (context.models[modelName]) {
+                results.push(`Visualizing model ${modelName}`);
+            }
+            continue;
+        }
+    }
+    return results;
+}
 const app = express();
 const libraryManager = new LibraryManager();
-
-// Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
-
-// Main route
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
-// Library access endpoint
 app.get('/api/libs/:name', (req, res) => {
     const lib = libraryManager.getLib(req.params.name);
     res.json({ lib });
 });
-
-// Script execution endpoint
 app.post('/api/execute', (req, res) => {
     const { script } = req.body;
     try {
-        // Execute the script using the library manager
         const result = executeScript(script, libraryManager);
         res.json({ success: true, result });
     } catch (error) {
         res.json({ success: false, error: error.message });
     }
 });
-
-// Serve library files
 app.get('/libs/:name', (req, res) => {
     const libName = req.params.name;
     const lib = libraryManager.getLib(libName);
     res.json(lib);
 });
-
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running with all libraries loaded on port ${PORT}`);
