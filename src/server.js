@@ -58,13 +58,19 @@ function executeScript(script, libraryManager) {
         libs: libraryManager.libs,
         models: {},
         data: null,
-        currentModel: null
+        currentModel: null,
+        output: []
     };
     const lines = script.split('\n');
     const results = [];
     for (let line of lines) {
         line = line.trim();
         if (!line || line.startsWith('#')) continue;
+        if (line.startsWith('write')) {
+            const message = line.substring(5).trim();
+            context.output.push(message.replace(/["']/g, ''));
+            continue;
+        }
         if (line.startsWith('package.add')) {
             const libName = line.split(' ')[1];
             results.push(`Loaded package: ${libName}`);
@@ -139,7 +145,10 @@ function executeScript(script, libraryManager) {
             continue;
         }
     }
-    return results;
+    return {
+        text: context.output.join('\n'),
+        results: results
+    };
 }
 const app = express();
 const libraryManager = new LibraryManager();
@@ -155,8 +164,12 @@ app.get('/api/libs/:name', (req, res) => {
 app.post('/api/execute', (req, res) => {
     const { script } = req.body;
     try {
-        const result = executeScript(script, libraryManager);
-        res.json({ success: true, result });
+        const { text, results } = executeScript(script, libraryManager);
+        res.json({ 
+            success: true, 
+            text: text,
+            result: results
+        });
     } catch (error) {
         res.json({ success: false, error: error.message });
     }
